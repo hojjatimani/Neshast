@@ -3,8 +3,6 @@ package bef.rest.neshast;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Handler;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
@@ -24,37 +22,36 @@ public class ActivityMain extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_sign_up);
         initViews();
-        new CountDownTimer(getNeshastDate().getTime() - System.currentTimeMillis(), 1000){
-            @Override
-            public void onTick(long millisUntilFinished) {
-                updateTimer(millisUntilFinished);
-            }
-
-            @Override
-            public void onFinish() {
-
-            }
-        }.start();
+//        new CountDownTimer(getNeshastDate().getTime() - System.currentTimeMillis(), 1000){
+//            @Override
+//            public void onTick(long millisUntilFinished) {
+//                updateTimer(millisUntilFinished);
+//            }
+//
+//            @Override
+//            public void onFinish() {
+//
+//            }
+//        }.start();
     }
 
     private void initViews() {
-        timer = (TextView) findViewById(R.id.timer);
-        final View label = findViewById(R.id.label_timeRemaing);
-        Util.setFont(this, Util.FontFamily.Default, Util.FontWeight.Regular, timer, label);
-        signUpPanel = (RelativeLayout) findViewById(R.id.signUpPanel);
+//        timer = (TextView) findViewById(R.id.timer);
+//        final View label = findViewById(R.id.label_timeRemaing);
+//        Util.setFont(this, Util.FontFamily.Default, Util.FontWeight.Regular, timer, label);
         next = (Button) findViewById(R.id.next);
 
-        timer.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                timer.setVisibility(View.GONE);
-                label.setVisibility(View.GONE);
-                signUpPanel.setVisibility(View.VISIBLE);
-                next.setVisibility(View.VISIBLE);
-            }
-        });
+//        timer.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                timer.setVisibility(View.GONE);
+//                label.setVisibility(View.GONE);
+//                signUpPanel.setVisibility(View.VISIBLE);
+//                next.setVisibility(View.VISIBLE);
+//            }
+//        });
     }
 
     private Date getNeshastDate(){
