@@ -2,27 +2,38 @@ package bef.rest.neshast;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.media.ExifInterface;
+import android.media.ThumbnailUtils;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.EventListener;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,15 +46,20 @@ public class Util {
     private static final String FONTS_EXTENTION = ".ttf";
     private static Map<String, Typeface> fonts = new HashMap<>();
     private static final String MAIN_PREFRENCES = "MAIN_PREFRENCES";
-    private static final String USER_NAME = "USER_NAME";
-    public static final String USER_ID = "USER_ID";
+    private static final String PREF_USER_NAME = "PREF_USER_NAME";
+    public static final String PREF_USER_ID = "PREF_USER_ID";
+    public static final String PREF_PROFILE_PICTURE_PATH = "PREF_PROFILE_PICTURE_PATH";
+    public static final String PREF_USER_ORGANIZATION = "PREF_USER_ORGANIZATION";
     private static final String IS_FIRST_RUN = "IS_FIRST_RUN";
+
+    public static final String APP_DATA_DIRECTORY = Environment.getExternalStorageDirectory() + File.separator + ".BefrestNeshast";
+    public static final String PROFILE_PICTURE_FILE_NAME = "profilePicture.jpg";
 
     private static FontFamily appDefaultFontFamily = FontFamily.IranSans;
 
     public static void setUserName(Context context, String userName) {
         SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        preferences.edit().putString(USER_NAME, userName).commit();
+        preferences.edit().putString(PREF_USER_NAME, userName).commit();
     }
 
     public static String getPhoneId(Context context) {
@@ -60,20 +76,34 @@ public class Util {
         preferences.edit().putBoolean(IS_FIRST_RUN, isFirstRun).commit();
     }
 
+    public static void setUsersProfilePicture(Context context, String path) {
+        copyFile(path, APP_DATA_DIRECTORY, PROFILE_PICTURE_FILE_NAME);
+        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
+        preferences.edit().putString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME).commit();
+    }
+
 
     public static String getUsersName(Context context) {
         SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        return preferences.getString(USER_NAME, "");
+        return preferences.getString(PREF_USER_NAME, "");
     }
 
     public static void setUserId(Context context, String userId) {
         SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        preferences.edit().putString(USER_ID, userId).commit();
+        preferences.edit().putString(PREF_USER_ID, userId).commit();
     }
 
 
     public static boolean userHasRegistered(Context context) {
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).contains(USER_ID);
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).contains(PREF_USER_ID);
+    }
+
+    public static final String getProfilePicturePath(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_PROFILE_PICTURE_PATH, "");
+    }
+
+    public static void setUserOrganization(Context context, String org) {
+        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putString(PREF_USER_ORGANIZATION, org).commit();
     }
 
     public enum FontFamily {
@@ -184,23 +214,14 @@ public class Util {
         setText(elem1, text1, elem2, text2, elem3, text3, elem4, text4, elem5, text5, elem6, text6, elem7, text7);
     }
 
-    public static boolean isNumeric(String s) {
-        try {
-            Integer.parseInt(s);
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
-    }
-
     public static boolean isNetworkAvailable(Context context) {
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        return networkInfo != null && networkInfo.isConnected();
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 
     public static Bitmap decodeSampledBitmapFromFile(String filePath,
-                                                         int reqWidth, int reqHeight) {
+                                                     int reqWidth, int reqHeight) {
 
         // First decode with inJustDecodeBounds=true to check dimensions
         final BitmapFactory.Options options = new BitmapFactory.Options();
@@ -213,30 +234,34 @@ public class Util {
 
         // Decode bitmap with inSampleSize set
         options.inJustDecodeBounds = false;
-
         Bitmap src = BitmapFactory.decodeFile(filePath, options);
-        Bitmap croped = cropToSquare(src);
-//        int width = src.getWidth();
-//        int height = src.getHeight();
-//
-//        int crop = Math.abs(width - height) / 2;
-//        Bitmap cropImg = Bitmap.createBitmap(src, crop, 0, height, height);
-
+        Bitmap croped = cropToSquare(filePath, src);
+//        int dimension = Math.min(src.getWidth(), src.getHeight());
+//        Bitmap croped = ThumbnailUtils.extractThumbnail(src, dimension, dimension);
         return getRoundedCornerBitmap(croped, croped.getWidth());
     }
 
-    public static Bitmap cropToSquare(Bitmap bitmap){
-        int width  = bitmap.getWidth();
-        int height = bitmap.getHeight();
-        int newWidth = (height > width) ? width : height;
-        int newHeight = (height > width)? height - ( height - width) : height;
-        int cropW = (width - height) / 2;
-        cropW = (cropW < 0)? 0: cropW;
-        int cropH = (height - width) / 2;
-        cropH = (cropH < 0)? 0: cropH;
-        Bitmap cropImg = Bitmap.createBitmap(bitmap, cropW, cropH, newWidth, newHeight);
-
-        return cropImg;
+    public static Bitmap cropToSquare(String filePath, Bitmap srcBmp) {
+        Matrix matrix = new Matrix();
+        try {
+            ExifInterface exif = new ExifInterface(filePath);
+            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1);
+            Log.d("EXIF", "Exif: " + orientation);
+            if (orientation == 6)
+                matrix.postRotate(90);
+            else if (orientation == 3)
+                matrix.postRotate(180);
+            else if (orientation == 8)
+                matrix.postRotate(270);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (srcBmp.getWidth() >= srcBmp.getHeight())
+            return Bitmap.createBitmap(srcBmp, srcBmp.getWidth() / 2 - srcBmp.getHeight() / 2, 0,
+                    srcBmp.getHeight(), srcBmp.getHeight(), matrix, true);
+        else
+            return Bitmap.createBitmap(srcBmp, 0, srcBmp.getHeight() / 2 - srcBmp.getWidth() / 2,
+                    srcBmp.getWidth(), srcBmp.getWidth(), matrix, true);
     }
 
     public static int calculateInSampleSize(
@@ -281,5 +306,62 @@ public class Util {
         canvas.drawBitmap(bitmap, rect, rect, paint);
 
         return output;
+    }
+
+    public static void copyFile(String input, String outputPath, String outputName) {
+
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+
+            //create output directory if it doesn't exist
+            File dir = new File(outputPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+                Log.d(TAG, "copyFile: out dir made!");
+            }
+
+
+            in = new FileInputStream(input);
+            out = new FileOutputStream(outputPath + File.separator + outputName);
+
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            in.close();
+            in = null;
+
+            // write the output file (You have now copied the file)
+            out.flush();
+            out.close();
+            out = null;
+
+        } catch (FileNotFoundException fnfe1) {
+            Log.e("tag", fnfe1.getMessage());
+        } catch (Exception e) {
+            Log.e("tag", e.getMessage());
+        }
+    }
+
+    public static String getRealPathFromURI(Context context, Uri contentURI) {
+        String result;
+        Cursor cursor = context.getContentResolver().query(contentURI, null, null, null, null);
+        if (cursor == null) { // Source is Dropbox or other similar local file path
+            result = contentURI.getPath();
+        } else {
+            cursor.moveToFirst();
+            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+            result = cursor.getString(idx);
+            cursor.close();
+        }
+        return result;
+    }
+
+    public static void showToast(Context c, String m, int d) {
+        Toast toast = Toast.makeText(c, m, d);
+//        setFont(c, FontFamily.Default, FontWeight.Regular, toast.getView().findViewById(com.android.internal.R.id.message));
+        toast.show();
     }
 }

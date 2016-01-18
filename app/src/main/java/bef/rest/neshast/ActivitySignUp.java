@@ -1,24 +1,30 @@
 package bef.rest.neshast;
 
+import android.animation.ArgbEvaluator;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.Display;
 import android.view.View;
+import android.view.ViewPropertyAnimator;
+import android.view.animation.BounceInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-
-import com.makeramen.roundedimageview.*;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -29,13 +35,15 @@ public class ActivitySignUp extends Activity {
     ImageView profilePicture;
     EditText name;
     EditText organization;
-
+    String profilePicPath;
+    ImageView befrestIcon;
+    private static final String TAG = "ActivitySignUp";
     public static final int CHOOSE_PIC_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_sign_up);
+        setContentView(R.layout.activity_sign_up_2);
         initViews();
     }
 
@@ -44,7 +52,9 @@ public class ActivitySignUp extends Activity {
         profilePicture = (ImageView) findViewById(R.id.profilePicture);
         name = (EditText) findViewById(R.id.name);
         organization = (EditText) findViewById(R.id.organization);
+        befrestIcon = (ImageView) findViewById(R.id.befrestIcon);
         setFonts();
+        setSize();
         setTexts();
         //set Profile Picture Size
     }
@@ -60,12 +70,14 @@ public class ActivitySignUp extends Activity {
                 profilePicture.getLayoutParams().height = profilePictureContainer.getHeight();
                 profilePicture.getLayoutParams().width = profilePictureContainer.getHeight();
                 profilePicture.requestLayout();
+                profilePicture.setImageBitmap(Util.getRoundedCornerBitmap(((BitmapDrawable) profilePicture.getDrawable()).getBitmap(), profilePictureContainer.getWidth()));
             }
         });
     }
 
     private void setFonts() {
-        Util.setFont(this, Util.FontFamily.Default, Util.FontWeight.Regular, name, organization, next);
+        Util.setFont(this, Util.FontFamily.Default, Util.FontWeight.Regular, name, organization, next,
+                findViewById(R.id.oddrunName), findViewById(R.id.befrestName), findViewById(R.id.oddrunSite));
     }
 
     private void setTexts() {
@@ -80,9 +92,28 @@ public class ActivitySignUp extends Activity {
     public void onViewClicked(View view) {
         int vId = view.getId();
         if (vId == next.getId()) {
-
+//            signUpUser();
+            animateColor();
         } else if (vId == profilePicture.getId()) {
             openImageIntent();
+        }
+    }
+
+    private void signUpUser() {
+        if (!Util.isNetworkAvailable(this)) {
+            Util.showToast(this, "اتصال به اینترنت را بررسی کنید!", Toast.LENGTH_SHORT);
+        } else {
+            String name = this.name.getText().toString();
+            String org = organization.getText().toString();
+            if (name == null || name.length() < 1 || org == null || org.length() < 1) {
+                Util.showToast(this, "لطفا نام و سازمان خود را به درستی وارد نمایید!", Toast.LENGTH_SHORT);
+            } else {
+                Util.setUserName(this, name);
+                Util.setUserOrganization(this, org);
+                if (profilePicPath != null) Util.setUsersProfilePicture(this, profilePicPath);
+                startActivity(new Intent(this, ActivityMain.class));
+                finish();
+            }
         }
     }
 
@@ -147,23 +178,42 @@ public class ActivitySignUp extends Activity {
                 } else {
                     selectedImageUri = data == null ? null : data.getData();
                 }
-//                profilePicture.setImageURI(selectedImageUri);
-                profilePicture.setImageBitmap(Util.decodeSampledBitmapFromFile(getRealPathFromURI(selectedImageUri), profilePicture.getWidth(), profilePicture.getHeight()));
+                profilePicPath = Util.getRealPathFromURI(this, selectedImageUri);
+                profilePicture.setImageBitmap(Util.decodeSampledBitmapFromFile(profilePicPath, profilePicture.getWidth(), profilePicture.getHeight()));
             }
         }
     }
 
-    private String getRealPathFromURI(Uri contentURI) {
-        String result;
-        Cursor cursor = getContentResolver().query(contentURI, null, null, null, null);
-        if (cursor == null) { // Source is Dropbox or other similar local file path
-            result = contentURI.getPath();
-        } else {
-            cursor.moveToFirst();
-            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
-            result = cursor.getString(idx);
-            cursor.close();
-        }
-        return result;
+    private void animateColor() {
+        int colorFrom = getResources().getColor(R.color.befrestBademjooni);
+        int colorTo = getResources().getColor(R.color.befrestRed);
+        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, colorTo);
+        colorAnimation.setDuration(animationLength);
+        colorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+
+            @Override
+            public void onAnimationUpdate(ValueAnimator animator) {
+                profilePicture.setBackgroundColor((int) animator.getAnimatedValue());
+            }
+
+        });
+        colorAnimation.start();
+
+        ViewPropertyAnimator animate = profilePicture.animate();
+        int screenWidth = getScreenWidth();
+        int width = profilePicture.getWidth();
+        float right = profilePicture.getRight();
+        float scaleXBy = befrestIcon.getWidth() / (float) profilePicture.getWidth();
+        animate.scaleX(scaleXBy);
+        animate.scaleY(befrestIcon.getHeight() / (float) profilePicture.getHeight());
+        Log.d(TAG, "animate: y - >      top - >   " + profilePicture.getY() + "     " + profilePicture.getTop() );
+        animate.translationX(screenWidth - right + (width - width * scaleXBy) / 2);
+        animate.translationY((-1) * profilePicture.getTop());
+//        BounceInterpolator bounceInterpolator = new BounceInterpolator();
+//        ObjectAnimator anim = ObjectAnimator.ofFloat(profilePicture, "translationY", 0f, -200 );
+//        anim.setInterpolator(bounceInterpolator);
+//        anim.setDuration(1100).start();
     }
+
+    int animationLength = 2000;
 }
