@@ -1,99 +1,134 @@
 package bef.rest.neshast;
 
-import android.animation.ArgbEvaluator;
-import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
+import android.animation.Animator;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.database.Cursor;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
 import android.provider.MediaStore;
+import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.view.ViewPager;
 import android.util.Log;
-import android.view.Display;
 import android.view.View;
-import android.view.ViewPropertyAnimator;
-import android.view.animation.BounceInterpolator;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ActivitySignUp extends Activity {
+public class ActivitySignUp extends FragmentActivity {
     Button next;
     ImageView profilePicture;
     EditText name;
     EditText organization;
     String profilePicPath;
     ImageView befrestIcon;
+    TextView nameLabel;
+    RelativeLayout content;
+
+    ViewPager pager;
+    FloatingActionButton chat;
     private static final String TAG = "ActivitySignUp";
     public static final int CHOOSE_PIC_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_sign_up_2);
-        initViews();
+        if (Util.userHasRegistered(this)) {
+            setContentView(R.layout.activity_main);
+            initViews();
+            addContent();
+            initContentViews();
+            setUserName();
+            if (Util.userHasProfilePicture(this)) setUserProfilePicture();
+        } else {
+            setContentView(R.layout.activity_sign_up_2);
+            initViews();
+            initLoginViews();
+        }
     }
 
     private void initViews() {
-        next = (Button) findViewById(R.id.next);
         profilePicture = (ImageView) findViewById(R.id.profilePicture);
-        name = (EditText) findViewById(R.id.name);
-        organization = (EditText) findViewById(R.id.organization);
         befrestIcon = (ImageView) findViewById(R.id.befrestIcon);
+        nameLabel = (TextView) findViewById(R.id.lable_name);
         setFonts();
         setSize();
         setTexts();
         //set Profile Picture Size
+//        profilePicture.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                profilePicture.setImageBitmap(Util.getRoundedCornerBitmap(((BitmapDrawable) profilePicture.getDrawable()).getBitmap(), profilePicture.getHeight()));
+//            }
+//        });
     }
 
-    private void setListeners() {
+    private void initLoginViews() {
+        next = (Button) findViewById(R.id.next);
+        name = (EditText) findViewById(R.id.name);
+        organization = (EditText) findViewById(R.id.organization);
+    }
+
+    private void initContentViews() {
+        pager = (ViewPager) content.findViewById(R.id.pager);
+        chat = (FloatingActionButton) content.findViewById(R.id.chat);
+        AdapterPager adapterPager = new AdapterPager(getSupportFragmentManager());
+        pager.setAdapter(adapterPager);
+        final ViewPagerDots dots = (ViewPagerDots) findViewById(R.id.dots);
+        dots.setNumberOfDots(this, adapterPager.getCount());
+        pager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+                dots.selectDot(position);
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+            }
+        });
     }
 
     private void setSize() {
-        final FrameLayout profilePictureContainer = (FrameLayout) findViewById(R.id.profilePictureContainer);
-        profilePictureContainer.post(new Runnable() {
+        profilePicture.post(new Runnable() {
             @Override
             public void run() {
-                profilePicture.getLayoutParams().height = profilePictureContainer.getHeight();
-                profilePicture.getLayoutParams().width = profilePictureContainer.getHeight();
+                profilePicture.getLayoutParams().width = profilePicture.getHeight();
                 profilePicture.requestLayout();
-                profilePicture.setImageBitmap(Util.getRoundedCornerBitmap(((BitmapDrawable) profilePicture.getDrawable()).getBitmap(), profilePictureContainer.getWidth()));
             }
         });
     }
 
     private void setFonts() {
         Util.setFont(this, Util.FontFamily.Default, Util.FontWeight.Regular, name, organization, next,
-                findViewById(R.id.oddrunName), findViewById(R.id.befrestName), findViewById(R.id.oddrunSite));
+                findViewById(R.id.oddrunName), nameLabel, findViewById(R.id.oddrunSite));
     }
 
     private void setTexts() {
 
     }
 
-    private int getScreenWidth() {
-        Display display = getWindowManager().getDefaultDisplay();
-        return display.getWidth();
-    }
-
     public void onViewClicked(View view) {
         int vId = view.getId();
         if (vId == next.getId()) {
-//            signUpUser();
-            animateColor();
+            signUpUser();
         } else if (vId == profilePicture.getId()) {
             openImageIntent();
         }
@@ -111,8 +146,8 @@ public class ActivitySignUp extends Activity {
                 Util.setUserName(this, name);
                 Util.setUserOrganization(this, org);
                 if (profilePicPath != null) Util.setUsersProfilePicture(this, profilePicPath);
-                startActivity(new Intent(this, ActivityMain.class));
-                finish();
+                Util.setUserHasRegistered(this, true);
+                animateUi();
             }
         }
     }
@@ -184,36 +219,131 @@ public class ActivitySignUp extends Activity {
         }
     }
 
-    private void animateColor() {
-        int colorFrom = getResources().getColor(R.color.befrestBademjooni);
-        int colorTo = getResources().getColor(R.color.befrestRed);
-        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, colorTo);
-        colorAnimation.setDuration(animationLength);
-        colorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+    private void animateUi() {
+        animateProfilePicture();
+        animateBefrestIcon();
+        animateHeader();
+        animateBackground();
+        animateLoginPanel();
+//        content = (RelativeLayout) getLayoutInflater().inflate(R.layout.content, null);
+//        content.setAlpha(0);
+//        ((ViewGroup) findViewById(R.id.contentHolder)).addView(content);
+//        content.animate().setDuration(animDurarion).alpha(1);
 
-            @Override
-            public void onAnimationUpdate(ValueAnimator animator) {
-                profilePicture.setBackgroundColor((int) animator.getAnimatedValue());
-            }
 
-        });
-        colorAnimation.start();
-
-        ViewPropertyAnimator animate = profilePicture.animate();
-        int screenWidth = getScreenWidth();
-        int width = profilePicture.getWidth();
-        float right = profilePicture.getRight();
-        float scaleXBy = befrestIcon.getWidth() / (float) profilePicture.getWidth();
-        animate.scaleX(scaleXBy);
-        animate.scaleY(befrestIcon.getHeight() / (float) profilePicture.getHeight());
-        Log.d(TAG, "animate: y - >      top - >   " + profilePicture.getY() + "     " + profilePicture.getTop() );
-        animate.translationX(screenWidth - right + (width - width * scaleXBy) / 2);
-        animate.translationY((-1) * profilePicture.getTop());
 //        BounceInterpolator bounceInterpolator = new BounceInterpolator();
 //        ObjectAnimator anim = ObjectAnimator.ofFloat(profilePicture, "translationY", 0f, -200 );
 //        anim.setInterpolator(bounceInterpolator);
 //        anim.setDuration(1100).start();
     }
 
-    int animationLength = 2000;
+    private void animateLoginPanel() {
+        findViewById(R.id.loginPanel)
+                .animate().setDuration(animDurarion).translationX(Util.getScreenWidth(this));
+    }
+
+    private void animateBackground() {
+//        int colorFrom = getResources().getColor(R.color.befrestBademjooni);
+//        int colorTo = getResources().getColor(R.color.lightGray);
+//        final View background = findViewById(R.id.background);
+//        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, colorTo).setDuration(animDurarion);
+//        colorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//
+//            @Override
+//            public void onAnimationUpdate(ValueAnimator animator) {
+//                background.setBackgroundColor((int) animator.getAnimatedValue());
+//            }
+//
+//        });
+//        colorAnimation.start();
+        findViewById(R.id.background).animate().setDuration(animDurarion).alpha(0);
+    }
+
+    private void animateHeader() {
+        int actionBarSize = getActionBarSize();
+
+        View header = findViewById(R.id.header);
+        header.animate().setDuration(animDurarion).translationY((-1f) * (header.getHeight() - actionBarSize));
+    }
+
+    private void animateProfilePicture() {
+        int actionBarSize = getActionBarSize();
+        int screenWidth = Util.getScreenWidth(this);
+        int width = profilePicture.getWidth();
+        int height = profilePicture.getHeight();
+        int right = profilePicture.getRight();
+        int top = profilePicture.getTop();
+        int padding = getResources().getDimensionPixelSize(R.dimen.space_small);
+        float scaleXBy = (actionBarSize - 2 * padding) / (float) width;
+        float scaleYBy = (actionBarSize- 2 * padding) / (float) height;
+        profilePicture.animate()
+                .setDuration(animDurarion)
+                .scaleX(scaleXBy)
+                .scaleY(scaleYBy)
+                .translationX(screenWidth - right + (width - width * scaleXBy) / 2 - padding)
+                .translationY((-1f) * (top + (height - height * scaleYBy) / 2) + padding);
+    }
+
+    private void animateBefrestIcon() {
+        int left = befrestIcon.getLeft();
+        int top = befrestIcon.getTop();
+        final int padding = getResources().getDimensionPixelSize(R.dimen.space_small);
+        befrestIcon.animate()
+                .setDuration(animDurarion)
+                .translationX((-1f) * (left - padding))
+                .translationY((-1f) * (top - padding))
+                .setListener(new Animator.AnimatorListener() {
+                    @Override
+                    public void onAnimationStart(Animator animation) {
+                        nameLabel.animate().setDuration(shortAnimDuration).alpha(0);
+                    }
+
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        nameLabel.setY((getActionBarSize() - nameLabel.getHeight()) / 2);
+                        setUserName();
+                        addContent();
+                        initContentViews();
+                    }
+
+                    @Override
+                    public void onAnimationCancel(Animator animation) {
+
+                    }
+
+                    @Override
+                    public void onAnimationRepeat(Animator animation) {
+
+                    }
+                });
+    }
+
+    private void addContent() {
+        content = (RelativeLayout) getLayoutInflater().inflate(R.layout.content, null);
+        content.setAlpha(0);
+        ((ViewGroup) findViewById(R.id.contentHolder)).addView(content);
+        content.animate().setDuration(shortAnimDuration).alpha(1);
+    }
+
+    private void setUserName() {
+        nameLabel.setText(Util.getUsersName(this));
+        nameLabel.requestLayout();
+        nameLabel.animate().setDuration(shortAnimDuration).alpha(1);
+    }
+
+    private void setUserProfilePicture() {
+        profilePicture.post(new Runnable() {
+            @Override
+            public void run() {
+                profilePicture.setImageBitmap(Util.decodeSampledBitmapFromFile(Util.getProfilePicturePath(ActivitySignUp.this), profilePicture.getWidth(), profilePicture.getHeight()));
+            }
+        });
+    }
+
+    private int getActionBarSize(){
+        return findViewById(R.id.actionBarSize).getHeight();
+    }
+
+    int animDurarion = 1000;
+    int shortAnimDuration = 500;
 }

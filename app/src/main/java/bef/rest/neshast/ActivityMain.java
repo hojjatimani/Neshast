@@ -35,7 +35,7 @@ public class ActivityMain extends AppCompatActivity {
 //                profilePicture.requestLayout();
             }
         });
-        askQuestion = (FloatingActionButton) findViewById(R.id.fab);
+        askQuestion = (FloatingActionButton) findViewById(R.id.chat);
         setFonts();
         setTexts();
     }

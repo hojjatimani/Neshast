@@ -2,6 +2,7 @@ package bef.rest.neshast;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -22,6 +23,8 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Display;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,6 +51,7 @@ public class Util {
     private static final String MAIN_PREFRENCES = "MAIN_PREFRENCES";
     private static final String PREF_USER_NAME = "PREF_USER_NAME";
     public static final String PREF_USER_ID = "PREF_USER_ID";
+    private static final String PREF_USER_HAS_REGISTERED = "PREF_USER_HAS_REGISTERED";
     public static final String PREF_PROFILE_PICTURE_PATH = "PREF_PROFILE_PICTURE_PATH";
     public static final String PREF_USER_ORGANIZATION = "PREF_USER_ORGANIZATION";
     private static final String IS_FIRST_RUN = "IS_FIRST_RUN";
@@ -95,7 +99,11 @@ public class Util {
 
 
     public static boolean userHasRegistered(Context context) {
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).contains(PREF_USER_ID);
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_USER_HAS_REGISTERED, false);
+    }
+
+    public static void setUserHasRegistered(Context context, boolean hasRegisrered) {
+        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_USER_HAS_REGISTERED, hasRegisrered).commit();
     }
 
     public static final String getProfilePicturePath(Context context) {
@@ -104,6 +112,15 @@ public class Util {
 
     public static void setUserOrganization(Context context, String org) {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putString(PREF_USER_ORGANIZATION, org).commit();
+    }
+
+    static int getScreenWidth(ActivitySignUp activitySignUp) {
+        Display display = activitySignUp.getWindowManager().getDefaultDisplay();
+        return display.getWidth();
+    }
+
+    public static boolean userHasProfilePicture(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).contains(PREF_PROFILE_PICTURE_PATH);
     }
 
     public enum FontFamily {
@@ -363,5 +380,17 @@ public class Util {
         Toast toast = Toast.makeText(c, m, d);
 //        setFont(c, FontFamily.Default, FontWeight.Regular, toast.getView().findViewById(com.android.internal.R.id.message));
         toast.show();
+    }
+
+    public static int dpToPx(int dp) {
+        return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
+    }
+
+    public static int getActionBarSize(Context context) {
+        TypedValue tv = new TypedValue();
+        if (context.getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true))
+            return TypedValue.complexToDimensionPixelSize(tv.data, context.getResources().getDisplayMetrics());
+        Log.d(TAG, "getActionBarSize: EROOOOORRRRRRRR!!!!!!!!!!!!");
+        return dpToPx(56);
     }
 }

@@ -6,22 +6,23 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="@dimen/activity_horizontal_margin"
+    android:background="@color/green"
     android:weightSum="100"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="bef.rest.neshast.ActivityMain"
     tools:showIn="@layout/activity_main">
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="30"
-        android:padding="@dimen/space_medium"
-        >
+    <!--<FrameLayout-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="0dp"-->
+        <!--android:layout_weight="30"-->
+        <!--android:padding="@dimen/space_medium">-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:src="@drawable/pp" />
-    </FrameLayout>
+        <!--<ImageView-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="match_parent"-->
+            <!--android:src="@drawable/pp" />-->
+    <!--</FrameLayout>-->
+
 
 </LinearLayout>
