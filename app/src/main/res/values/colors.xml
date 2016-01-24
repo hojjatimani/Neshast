@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--<color name="colorPrimary">#3F51B5</color>-->
-    <!--<color name="colorPrimaryDark">#303F9F</color>-->
-    <!--<color name="colorAccent">#FF4081</color>-->
+    <!--<color text="colorPrimary">#3F51B5</color>-->
+    <!--<color text="colorPrimaryDark">#303F9F</color>-->
+    <!--<color text="colorAccent">#FF4081</color>-->
 
     <color name="colorPrimary">@color/befrestRed</color>
     <color name="colorPrimaryDark">@color/befrestBademjooni</color>
@@ -12,12 +12,14 @@
 
     <color name="black_overlay">#66000000</color>
 
+    <color name="black">#000</color>
     <color name="white">#FFF</color>
     <color name="lightGray">#DDD</color>
     <color name="gray">#999</color>
     <color name="darkGray">#555</color>
 
     <color name="green">#195</color>
+    <color name="lightGreen">#1CBB9B</color>
 
     <color name="befrestRed">#f06060</color>
     <color name="befrestBademjooni">#2c3e50</color>

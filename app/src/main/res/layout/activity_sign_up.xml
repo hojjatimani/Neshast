@@ -5,7 +5,7 @@
     android:background="@drawable/background"
     android:orientation="vertical"
     android:weightSum="100"
-    tools:context="bef.rest.neshast.ActivityMain">
+    tools:context=".ActivityChat">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -63,7 +63,7 @@
         android:orientation="vertical">
 
         <EditText
-            android:id="@+id/name"
+            android:id="@+id/text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@null"

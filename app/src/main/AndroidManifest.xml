@@ -4,9 +4,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
 
     <application
         android:allowBackup="true"
@@ -16,6 +14,7 @@
         android:theme="@style/AppTheme">
         <activity
             android:name=".ActivitySignUp"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -24,8 +23,9 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ActivityMain"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:name=".ActivityChat"
+            android:theme="@style/AppTheme.NoActionBar"
+            />
     </application>
 
 </manifest>

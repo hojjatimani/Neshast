@@ -1,5 +1,6 @@
 package bef.rest.neshast;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -22,6 +23,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.support.design.widget.Snackbar;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Display;
@@ -55,9 +57,12 @@ public class Util {
     public static final String PREF_PROFILE_PICTURE_PATH = "PREF_PROFILE_PICTURE_PATH";
     public static final String PREF_USER_ORGANIZATION = "PREF_USER_ORGANIZATION";
     private static final String IS_FIRST_RUN = "IS_FIRST_RUN";
+    private static final String PREF_IS_IMAGE_UPLOADED = "PREF_IS_IMAGE_UPLOADED";
+    private static final String PREF_CONTENT_IS_LOCKED = "PREF_CONTENT_IS_LOCKED";
+    public static final String BASE_URL = "http://172.17.0.175:6543/meeting/";
 
     public static final String APP_DATA_DIRECTORY = Environment.getExternalStorageDirectory() + File.separator + ".BefrestNeshast";
-    public static final String PROFILE_PICTURE_FILE_NAME = "profilePicture.jpg";
+    public static final String PROFILE_PICTURE_FILE_NAME = "profilePicture";
 
     private static FontFamily appDefaultFontFamily = FontFamily.IranSans;
 
@@ -81,20 +86,30 @@ public class Util {
     }
 
     public static void setUsersProfilePicture(Context context, String path) {
-        copyFile(path, APP_DATA_DIRECTORY, PROFILE_PICTURE_FILE_NAME);
+        copyFile(path, APP_DATA_DIRECTORY, PROFILE_PICTURE_FILE_NAME + path.substring(path.lastIndexOf('.')));
         SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        preferences.edit().putString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME).commit();
+        preferences.edit().putString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME + path.substring(path.lastIndexOf('.'))).commit();
     }
 
+    public static void setImageUploaded(Context context, boolean uploaded) {
+        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_IS_IMAGE_UPLOADED, uploaded).commit();
+    }
 
     public static String getUsersName(Context context) {
-        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        return preferences.getString(PREF_USER_NAME, "");
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_USER_NAME, "");
     }
 
-    public static void setUserId(Context context, String userId) {
+    public static String getUserOrganization(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_USER_ORGANIZATION, "");
+    }
+
+    public static void setUserId(Context context, long userId) {
         SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        preferences.edit().putString(PREF_USER_ID, userId).commit();
+        preferences.edit().putLong(PREF_USER_ID, userId).commit();
+    }
+
+    public static long getUserId(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getLong(PREF_USER_ID, 0);
     }
 
 
@@ -114,15 +129,41 @@ public class Util {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putString(PREF_USER_ORGANIZATION, org).commit();
     }
 
-    static int getScreenWidth(ActivitySignUp activitySignUp) {
-        Display display = activitySignUp.getWindowManager().getDefaultDisplay();
+    static int getScreenWidth(Activity activity) {
+        Display display = activity.getWindowManager().getDefaultDisplay();
         return display.getWidth();
+    }
+
+    static int getScreenHeight(Activity activity){
+        Display display = activity.getWindowManager().getDefaultDisplay();
+        return display.getHeight();
     }
 
     public static boolean userHasProfilePicture(Context context) {
         return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).contains(PREF_PROFILE_PICTURE_PATH);
     }
 
+    public static void setUserData(Context context, String name, String org, String profilePicPath) {
+        setUserName(context, name);
+        setUserOrganization(context, org);
+        if (profilePicPath != null) setUsersProfilePicture(context, profilePicPath);
+    }
+
+    public static boolean shouldUploadImage(Context context) {
+        return userHasProfilePicture(context) && !isImageUploaded(context);
+    }
+
+    private static boolean isImageUploaded(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_IS_IMAGE_UPLOADED, false);
+    }
+
+    public static boolean isContentLocked(Context context, int index){
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_CONTENT_IS_LOCKED + index , true);
+    }
+
+    public static void unlockContent(Context context , int index){
+        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_CONTENT_IS_LOCKED + index, false).commit();
+    }
     public enum FontFamily {
         IranSans("IranSans"),
         Default(IranSans.toString());
@@ -376,7 +417,7 @@ public class Util {
         return result;
     }
 
-    public static void showToast(Context c, String m, int d) {
+    public static void showToast(Context c, String m, @Snackbar.Duration int d) {
         Toast toast = Toast.makeText(c, m, d);
 //        setFont(c, FontFamily.Default, FontWeight.Regular, toast.getView().findViewById(com.android.internal.R.id.message));
         toast.show();
@@ -384,6 +425,10 @@ public class Util {
 
     public static int dpToPx(int dp) {
         return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
+    }
+
+    public static void alertNoConnection(Context context){
+        showToast(context, "اتصال به اینترنت را بررسی کنید!", Toast.LENGTH_SHORT);
     }
 
     public static int getActionBarSize(Context context) {

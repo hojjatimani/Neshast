@@ -1,12 +1,11 @@
 package bef.rest.neshast;
 
 import android.animation.Animator;
-import android.app.Activity;
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -15,11 +14,15 @@ import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -28,6 +31,14 @@ import android.widget.Toast;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.GsonConverterFactory;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 public class ActivitySignUp extends FragmentActivity {
     Button next;
@@ -38,9 +49,18 @@ public class ActivitySignUp extends FragmentActivity {
     ImageView befrestIcon;
     TextView nameLabel;
     RelativeLayout content;
+    RelativeLayout chatPanel;
+    RecyclerView chatList;
+    ImageButton send;
+    EditText question;
+
+    String tempQuestion = "";
 
     ViewPager pager;
     FloatingActionButton chat;
+
+    private static final int animDurarion = 1000;
+    private static final int shortAnimDuration = 500;
     private static final String TAG = "ActivitySignUp";
     public static final int CHOOSE_PIC_CODE = 1;
 
@@ -52,35 +72,38 @@ public class ActivitySignUp extends FragmentActivity {
             initViews();
             addContent();
             initContentViews();
+            uploadImageIfNeeded();
             setUserName();
-            if (Util.userHasProfilePicture(this)) setUserProfilePicture();
         } else {
             setContentView(R.layout.activity_sign_up_2);
             initViews();
             initLoginViews();
         }
+        if (Util.userHasProfilePicture(this)) setUserProfilePicture();
+        if (!Util.isNetworkAvailable(this)) Util.alertNoConnection(this);
+        setFonts();
     }
 
     private void initViews() {
         profilePicture = (ImageView) findViewById(R.id.profilePicture);
         befrestIcon = (ImageView) findViewById(R.id.befrestIcon);
         nameLabel = (TextView) findViewById(R.id.lable_name);
-        setFonts();
-        setSize();
-        setTexts();
-        //set Profile Picture Size
-//        profilePicture.post(new Runnable() {
-//            @Override
-//            public void run() {
-//                profilePicture.setImageBitmap(Util.getRoundedCornerBitmap(((BitmapDrawable) profilePicture.getDrawable()).getBitmap(), profilePicture.getHeight()));
-//            }
-//        });
+
+        profilePicture.post(new Runnable() {
+            @Override
+            public void run() {
+                profilePicture.getLayoutParams().width = profilePicture.getHeight();
+                profilePicture.requestLayout();
+            }
+        });
     }
 
     private void initLoginViews() {
         next = (Button) findViewById(R.id.next);
         name = (EditText) findViewById(R.id.name);
         organization = (EditText) findViewById(R.id.organization);
+        name.setText(Util.getUsersName(ActivitySignUp.this));
+        organization.setText(Util.getUserOrganization(ActivitySignUp.this));
     }
 
     private void initContentViews() {
@@ -106,50 +129,97 @@ public class ActivitySignUp extends FragmentActivity {
         });
     }
 
-    private void setSize() {
-        profilePicture.post(new Runnable() {
-            @Override
-            public void run() {
-                profilePicture.getLayoutParams().width = profilePicture.getHeight();
-                profilePicture.requestLayout();
-            }
-        });
-    }
-
     private void setFonts() {
         Util.setFont(this, Util.FontFamily.Default, Util.FontWeight.Regular, name, organization, next,
                 findViewById(R.id.oddrunName), nameLabel, findViewById(R.id.oddrunSite));
     }
 
-    private void setTexts() {
-
-    }
-
-    public void onViewClicked(View view) {
-        int vId = view.getId();
-        if (vId == next.getId()) {
-            signUpUser();
-        } else if (vId == profilePicture.getId()) {
-            openImageIntent();
-        }
-    }
-
     private void signUpUser() {
-        if (!Util.isNetworkAvailable(this)) {
-            Util.showToast(this, "اتصال به اینترنت را بررسی کنید!", Toast.LENGTH_SHORT);
-        } else {
-            String name = this.name.getText().toString();
-            String org = organization.getText().toString();
-            if (name == null || name.length() < 1 || org == null || org.length() < 1) {
-                Util.showToast(this, "لطفا نام و سازمان خود را به درستی وارد نمایید!", Toast.LENGTH_SHORT);
-            } else {
-                Util.setUserName(this, name);
-                Util.setUserOrganization(this, org);
-                if (profilePicPath != null) Util.setUsersProfilePicture(this, profilePicPath);
-                Util.setUserHasRegistered(this, true);
-                animateUi();
+        String name = this.name.getText().toString();
+        String org = organization.getText().toString();
+        if (name == null || name.length() < 1 || org == null || org.length() < 1)
+            Util.showToast(this, "لطفا نام و سازمان خود را به درستی وارد نمایید!", Toast.LENGTH_SHORT);
+        else {
+            Util.setUserData(this, name, org, profilePicPath);
+            if (!Util.isNetworkAvailable(this))
+                Util.alertNoConnection(this);
+            else {
+                registerUserOnServer(name, org);
             }
         }
+    }
+
+    private void registerUserOnServer(String name, String org) {
+        Log.d(TAG, "registerUserOnServer: ");
+        disableNextBtn();
+        RetrofitService retrofit = new Retrofit.Builder()
+                .baseUrl(Util.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build().create(RetrofitService.class);
+        Call<POJOs.RegisterResponse> regRes = retrofit.registerUser(name, org);
+        regRes.enqueue(new Callback<POJOs.RegisterResponse>() {
+            @Override
+            public void onResponse(Response<POJOs.RegisterResponse> response) {
+                Log.d(TAG, "onResponse:  isSuccess: " + response.isSuccess() + "   errorCode: " + response.body().errorCode + "     uid: " + response.body().entity.uid);
+                if (response.isSuccess())
+                    if (response.body().errorCode == 0) {
+                        Util.setUserId(ActivitySignUp.this, response.body().entity.uid);
+//                        Util.setUserHasRegistered(ActivitySignUp.this, true);
+                        animateUi();
+                        uploadImageIfNeeded();
+                        return;
+                    }
+                enableNextBtn();
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+//                TODO just unComment
+//                Log.d(TAG, "onFailure");
+//                t.printStackTrace();
+//                Toast.makeText(ActivitySignUp.this, "مشکل در ارسال اطلاعات!", Toast.LENGTH_LONG).show();
+//                enableNextBtn();
+            }
+        });
+
+        animateUi();
+    }
+
+    private void enableNextBtn() {
+        next.setText("ارسال اطلاعات");
+        next.setEnabled(true);
+    }
+
+    private void disableNextBtn() {
+        next.setText("در حال ارتباط ...");
+        next.setEnabled(false);
+    }
+
+    private void uploadImageIfNeeded() {
+        if (!Util.shouldUploadImage(ActivitySignUp.this))
+            return;
+        String imgPath = Util.getProfilePicturePath(ActivitySignUp.this);
+        MediaType mediaType = MediaType.parse("image/" + imgPath.substring(imgPath.lastIndexOf('.')));
+        RetrofitService retrofit = new Retrofit.Builder()
+                .baseUrl(Util.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build().create(RetrofitService.class);
+        Call<POJOs.UpdateResponse> upRes = retrofit.uploadImage(Util.getUserId(ActivitySignUp.this), RequestBody.create(mediaType, new File(imgPath)));
+        upRes.enqueue(new Callback<POJOs.UpdateResponse>() {
+            @Override
+            public void onResponse(Response<POJOs.UpdateResponse> response) {
+                Log.d(TAG, "onResponse (upload): errCode" + response.body().errorCode);
+                if (response.isSuccess())
+                    if (response.body().errorCode == 0)
+                        Util.setImageUploaded(ActivitySignUp.this, true);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Log.d(TAG, "onFailure: upload");
+                t.printStackTrace();
+            }
+        });
     }
 
     private Uri outputFileUri;
@@ -275,7 +345,7 @@ public class ActivitySignUp extends FragmentActivity {
         int top = profilePicture.getTop();
         int padding = getResources().getDimensionPixelSize(R.dimen.space_small);
         float scaleXBy = (actionBarSize - 2 * padding) / (float) width;
-        float scaleYBy = (actionBarSize- 2 * padding) / (float) height;
+        float scaleYBy = (actionBarSize - 2 * padding) / (float) height;
         profilePicture.animate()
                 .setDuration(animDurarion)
                 .scaleX(scaleXBy)
@@ -331,6 +401,46 @@ public class ActivitySignUp extends FragmentActivity {
         nameLabel.animate().setDuration(shortAnimDuration).alpha(1);
     }
 
+    private void goToChat() {
+        startActivity(new Intent(ActivitySignUp.this, ActivityChat.class));
+//        chat.hide();
+//        chat.hide(new FloatingActionButton.OnVisibilityChangedListener() {
+//            @Override
+//            public void onHidden(FloatingActionButton fab) {
+//                startActivity(new Intent(ActivitySignUp.this, ActivityChat.class));
+//            }
+//        });
+//        content.animate().setDuration(shortAnimDuration).alpha(0).setListener(new Animator.AnimatorListener() {
+//            @Override
+//            public void onAnimationStart(Animator animation) {
+//
+//            }
+//
+//            @Override
+//            public void onAnimationEnd(Animator animation) {
+//                ViewGroup contentHolder = (ViewGroup) findViewById(R.id.contentHolder);
+//                contentHolder.removeView(content);
+//                chatPanel = (RelativeLayout) getLayoutInflater().inflate(R.layout.activity_chat_content, null);
+//                chatPanel.setAlpha(0);
+//                contentHolder.addView(chatPanel);
+//                chatPanel.animate().setDuration(shortAnimDuration).alpha(1);
+//                chatList = (RecyclerView) chatPanel.findViewById(R.id.list);
+//                send = (ImageButton) chatPanel.findViewById(R.id.send);
+//                question = (EditText) findViewById(R.id.question);
+//            }
+//
+//            @Override
+//            public void onAnimationCancel(Animator animation) {
+//
+//            }
+//
+//            @Override
+//            public void onAnimationRepeat(Animator animation) {
+//
+//            }
+//        });
+    }
+
     private void setUserProfilePicture() {
         profilePicture.post(new Runnable() {
             @Override
@@ -340,10 +450,78 @@ public class ActivitySignUp extends FragmentActivity {
         });
     }
 
-    private int getActionBarSize(){
+    private int getActionBarSize() {
         return findViewById(R.id.actionBarSize).getHeight();
     }
 
-    int animDurarion = 1000;
-    int shortAnimDuration = 500;
+    private void showAskDialog() {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_ask);
+        dialog.setCancelable(false);
+        TextView title = (TextView) dialog.findViewById(R.id.title);
+        final EditText question = (EditText) dialog.findViewById(R.id.edit_text);
+        question.setText(tempQuestion);
+        TextView okBTN = (TextView) dialog.findViewById(R.id.ok);
+        TextView cancelBTN = (TextView) dialog.findViewById(R.id.cancel);
+        Util.setFont(ActivitySignUp.this, Util.FontFamily.Default, Util.FontWeight.Regular, title, question, okBTN, cancelBTN);
+        dialog.getWindow().getAttributes().width = WindowManager.LayoutParams.MATCH_PARENT;
+        dialog.show();
+        okBTN.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                tempQuestion = question.getText().toString();
+                sendQuestion(tempQuestion);
+                dialog.dismiss();
+            }
+
+        });
+        cancelBTN.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+    }
+
+    private void sendQuestion(String question) {
+        RetrofitService retrofit = new Retrofit.Builder()
+                .baseUrl(Util.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build().create(RetrofitService.class);
+        Call<POJOs.AskResponse> askResponse = retrofit.sendQuestion(Util.getUserId(this), question);
+        askResponse.enqueue(new Callback<POJOs.AskResponse>() {
+            @Override
+            public void onResponse(Response<POJOs.AskResponse> response) {
+                Log.d(TAG, "onResponse (ask question): errCode" + response.body().errorCode);
+                if (response.isSuccess())
+                    if (response.body().errorCode == 0) {
+                        Util.showToast(ActivitySignUp.this, "پرسش با موفقیت ارسال شد!", Toast.LENGTH_LONG);
+                        tempQuestion = "";
+                        return;
+                    }
+                Util.showToast(ActivitySignUp.this, "ارسال پرسش با مشکل مواجه شد.", Toast.LENGTH_LONG);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Log.d(TAG, "onFailure: ask question");
+                t.printStackTrace();
+                Util.showToast(ActivitySignUp.this, "ارسال پرسش با مشکل مواجه شد.", Toast.LENGTH_LONG);
+            }
+        });
+    }
+
+    public void onViewClicked(View view) {
+        int vId = view.getId();
+        if (next != null && (vId == next.getId())) {
+            signUpUser();
+        } else if (vId == profilePicture.getId()) {
+            openImageIntent();
+        } else if (chat != null && (vId == chat.getId())) {
+            goToChat();
+//            if (Util.isNetworkAvailable(this)) showAskDialog();
+//            else Util.alertNoConnection(this);
+        }
+    }
 }

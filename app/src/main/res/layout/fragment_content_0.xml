@@ -10,7 +10,7 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="800"
-        android:background="@drawable/alpha_background"
+        android:background="@drawable/content_fragments_background"
         android:gravity="center"
         android:orientation="vertical">
 

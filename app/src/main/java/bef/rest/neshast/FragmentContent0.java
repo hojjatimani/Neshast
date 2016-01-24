@@ -26,7 +26,7 @@ public class FragmentContent0 extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        inflater.getContext();
+        context = inflater.getContext();
         parent = inflater.inflate(R.layout.fragment_content_0, null);
         initViews();
         if (countDownTimer == null)
