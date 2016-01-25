@@ -3,6 +3,7 @@ package bef.rest.neshast;
 import android.animation.Animator;
 import android.app.Dialog;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -28,12 +29,18 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
+import rest.bef.Befrest;
+import rest.bef.BefrestMessage;
+import rest.bef.BefrestPushReceiver;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.GsonConverterFactory;
@@ -49,6 +56,8 @@ public class ActivitySignUp extends FragmentActivity {
     ImageView befrestIcon;
     TextView nameLabel;
     RelativeLayout content;
+    AdapterPager adapterPager;
+    DynamicPushReceiver dPushReceiver;
     RelativeLayout chatPanel;
     RecyclerView chatList;
     ImageButton send;
@@ -82,6 +91,20 @@ public class ActivitySignUp extends FragmentActivity {
         if (Util.userHasProfilePicture(this)) setUserProfilePicture();
         if (!Util.isNetworkAvailable(this)) Util.alertNoConnection(this);
         setFonts();
+
+        Befrest.registerPushReceiver(this, (dPushReceiver = new DynamicPushReceiver()));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (adapterPager != null) adapterPager.notifyDataSetChanged();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (dPushReceiver != null) Befrest.unregisterPushReceiver(this, dPushReceiver);
     }
 
     private void initViews() {
@@ -109,7 +132,7 @@ public class ActivitySignUp extends FragmentActivity {
     private void initContentViews() {
         pager = (ViewPager) content.findViewById(R.id.pager);
         chat = (FloatingActionButton) content.findViewById(R.id.chat);
-        AdapterPager adapterPager = new AdapterPager(getSupportFragmentManager());
+        adapterPager = new AdapterPager(getSupportFragmentManager());
         pager.setAdapter(adapterPager);
         final ViewPagerDots dots = (ViewPagerDots) findViewById(R.id.dots);
         dots.setNumberOfDots(this, adapterPager.getCount());
@@ -401,46 +424,6 @@ public class ActivitySignUp extends FragmentActivity {
         nameLabel.animate().setDuration(shortAnimDuration).alpha(1);
     }
 
-    private void goToChat() {
-        startActivity(new Intent(ActivitySignUp.this, ActivityChat.class));
-//        chat.hide();
-//        chat.hide(new FloatingActionButton.OnVisibilityChangedListener() {
-//            @Override
-//            public void onHidden(FloatingActionButton fab) {
-//                startActivity(new Intent(ActivitySignUp.this, ActivityChat.class));
-//            }
-//        });
-//        content.animate().setDuration(shortAnimDuration).alpha(0).setListener(new Animator.AnimatorListener() {
-//            @Override
-//            public void onAnimationStart(Animator animation) {
-//
-//            }
-//
-//            @Override
-//            public void onAnimationEnd(Animator animation) {
-//                ViewGroup contentHolder = (ViewGroup) findViewById(R.id.contentHolder);
-//                contentHolder.removeView(content);
-//                chatPanel = (RelativeLayout) getLayoutInflater().inflate(R.layout.activity_chat_content, null);
-//                chatPanel.setAlpha(0);
-//                contentHolder.addView(chatPanel);
-//                chatPanel.animate().setDuration(shortAnimDuration).alpha(1);
-//                chatList = (RecyclerView) chatPanel.findViewById(R.id.list);
-//                send = (ImageButton) chatPanel.findViewById(R.id.send);
-//                question = (EditText) findViewById(R.id.question);
-//            }
-//
-//            @Override
-//            public void onAnimationCancel(Animator animation) {
-//
-//            }
-//
-//            @Override
-//            public void onAnimationRepeat(Animator animation) {
-//
-//            }
-//        });
-    }
-
     private void setUserProfilePicture() {
         profilePicture.post(new Runnable() {
             @Override
@@ -512,6 +495,33 @@ public class ActivitySignUp extends FragmentActivity {
         });
     }
 
+    private class DynamicPushReceiver extends BefrestPushReceiver {
+
+        @Override
+        public void onPushReceived(Context context, BefrestMessage[] messages) {
+            for (BefrestMessage message : messages) {
+                JSONObject jsObject = null;
+                try {
+                    jsObject = new JSONObject(message.getData());
+                    switch (jsObject.getString(Util.SIGNAL)) {
+                        case "1":
+                        case "2":
+                        case "3":
+                        case "4":
+                        case "5":
+                        case "100":
+                            break;
+                        default:
+                            Util.unlockContent(context, Integer.valueOf(jsObject.getString(Util.SIGNAL)) % 10);
+                            if (adapterPager != null) adapterPager.notifyDataSetChanged();
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
     public void onViewClicked(View view) {
         int vId = view.getId();
         if (next != null && (vId == next.getId())) {
@@ -519,9 +529,8 @@ public class ActivitySignUp extends FragmentActivity {
         } else if (vId == profilePicture.getId()) {
             openImageIntent();
         } else if (chat != null && (vId == chat.getId())) {
-            goToChat();
-//            if (Util.isNetworkAvailable(this)) showAskDialog();
-//            else Util.alertNoConnection(this);
+            startActivity(new Intent(ActivitySignUp.this, ActivityChat.class));
+
         }
     }
 }

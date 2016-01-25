@@ -1,6 +1,7 @@
 package bef.rest.neshast;
 
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -59,7 +60,11 @@ public class Util {
     private static final String IS_FIRST_RUN = "IS_FIRST_RUN";
     private static final String PREF_IS_IMAGE_UPLOADED = "PREF_IS_IMAGE_UPLOADED";
     private static final String PREF_CONTENT_IS_LOCKED = "PREF_CONTENT_IS_LOCKED";
+    private static final String PREF_NUMBER_OF_CHAT_MESSAGES = "PREF_NUMBER_OF_CHAT_MESSAGES";
+    private static final String PREF_IS_INTRO_BTN_ENABLED = "PREF_IS_INTRO_BTN_ENABLED";
     public static final String BASE_URL = "http://172.17.0.175:6543/meeting/";
+    public static final String SIGNAL = "signal";
+    public static final String MESSAGE = "message";
 
     public static final String APP_DATA_DIRECTORY = Environment.getExternalStorageDirectory() + File.separator + ".BefrestNeshast";
     public static final String PROFILE_PICTURE_FILE_NAME = "profilePicture";
@@ -129,12 +134,31 @@ public class Util {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putString(PREF_USER_ORGANIZATION, org).commit();
     }
 
+    public static void increaserNumberOfChatMessages(Context context, int n) {
+        SharedPreferences prefs = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
+        int current = prefs.getInt(PREF_NUMBER_OF_CHAT_MESSAGES, 0);
+        prefs.edit().putInt(PREF_NUMBER_OF_CHAT_MESSAGES, current + n).commit();
+    }
+
+    public static void addMessageToChatTable(Context context, String msg, boolean isfromBefrest, long time) {
+        ContentValues values = new ContentValues();
+        values.put(ChatTable.COLUMN_MSG, msg);
+        values.put(ChatTable.COLUMN_TIME, System.currentTimeMillis());
+        values.put(ChatTable.COLUMN_IS_FROM_BEFREST, isfromBefrest ? 1 : 0);
+        context.getContentResolver().insert(ContentProviderChat.CONTENT_URI, values);
+        Util.increaserNumberOfChatMessages(context, 1);
+    }
+
+    public static int getNumberOfChatMessages(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getInt(PREF_NUMBER_OF_CHAT_MESSAGES, 0);
+    }
+
     static int getScreenWidth(Activity activity) {
         Display display = activity.getWindowManager().getDefaultDisplay();
         return display.getWidth();
     }
 
-    static int getScreenHeight(Activity activity){
+    static int getScreenHeight(Activity activity) {
         Display display = activity.getWindowManager().getDefaultDisplay();
         return display.getHeight();
     }
@@ -157,13 +181,27 @@ public class Util {
         return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_IS_IMAGE_UPLOADED, false);
     }
 
-    public static boolean isContentLocked(Context context, int index){
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_CONTENT_IS_LOCKED + index , true);
+    public static boolean isContentLocked(Context context, int index) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_CONTENT_IS_LOCKED + index, true);
     }
 
-    public static void unlockContent(Context context , int index){
+    public static void unlockContent(Context context, int index) {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_CONTENT_IS_LOCKED + index, false).commit();
     }
+
+    public static void enableIntroductionBtn(Context context){
+        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_IS_INTRO_BTN_ENABLED, true).commit();
+    }
+
+    public static void disableIntroductionBtn(Context context){
+        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_IS_INTRO_BTN_ENABLED, false).commit();
+    }
+
+    public static boolean isIntroductionBtnEnabled(Context context){
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_IS_INTRO_BTN_ENABLED, false);
+    }
+
+
     public enum FontFamily {
         IranSans("IranSans"),
         Default(IranSans.toString());
@@ -203,7 +241,7 @@ public class Util {
         setFont(typeFace, elements);
     }
 
-    private static Typeface getTypeFace(Context context, FontFamily fontFamily, FontWeight fontWeight) {
+    public static Typeface getTypeFace(Context context, FontFamily fontFamily, FontWeight fontWeight) {
         if (!fonts.containsKey(fontFamily.toString() + fontWeight.toString()))
             fonts.put(fontFamily.toString() + fontWeight.toString(), Typeface.createFromAsset(context.getAssets(), getTypeFacePath(fontFamily, fontWeight)));
         return fonts.get(fontFamily.toString() + fontWeight.toString());
@@ -427,7 +465,7 @@ public class Util {
         return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
     }
 
-    public static void alertNoConnection(Context context){
+    public static void alertNoConnection(Context context) {
         showToast(context, "اتصال به اینترنت را بررسی کنید!", Toast.LENGTH_SHORT);
     }
 

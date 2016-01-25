@@ -13,31 +13,31 @@ import android.util.Log;
 public class MyDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MyDatabaseHelper";
 
-    public static final String DB_NAME = "TestDatabase";
+    public static final String DB_NAME = "chatstable.db";
     public static final int DB_VERSION = 1;
 
-    private static final String TYPE_TEXT = " msg";
-    public static final String TYPE_INTEGER = " integer";
-    public static final String TYPE_REAL = " real";
-
-    private static final String COMMA_SEP = ", ";
-
-
-    public static final String TABLE_MESSAGES = "messages";
-    public static final String COLUMN_ID = "_id";
-    public static final String COLUMN_MSG = "msg";
-    public static final String COLUMN_TIME = "time";
-    public static final String COLUMN_IS_FROM_BEFREST = "isFromBefrest";
-
-    public static final String[] ALL_COLUMNS = {COLUMN_ID, COLUMN_MSG, COLUMN_TIME, COLUMN_IS_FROM_BEFREST};
-
-
-    private static final String CREATE_MESSAGES_TABLE =
-            "create table " + TABLE_MESSAGES + "("
-                    + COLUMN_ID + TYPE_INTEGER + " primary key autoincrement" + COMMA_SEP
-                    + COLUMN_MSG + TYPE_TEXT + " not null" + COMMA_SEP
-                    + COLUMN_TIME + TYPE_INTEGER + COMMA_SEP
-                    + COLUMN_IS_FROM_BEFREST + TYPE_INTEGER + " );";
+//    private static final String TYPE_TEXT = " msg";
+//    public static final String TYPE_INTEGER = " integer";
+//    public static final String TYPE_REAL = " real";
+//
+//    private static final String COMMA_SEP = ", ";
+//
+//
+//    public static final String TABLE_MESSAGES = "messages";
+//    public static final String COLUMN_ID = "_id";
+//    public static final String COLUMN_MSG = "msg";
+//    public static final String COLUMN_TIME = "time";
+//    public static final String COLUMN_IS_FROM_BEFREST = "isFromBefrest";
+//
+//    public static final String[] ALL_COLUMNS = {COLUMN_ID, COLUMN_MSG, COLUMN_TIME, COLUMN_IS_FROM_BEFREST};
+//
+//
+//    private static final String CREATE_MESSAGES_TABLE =
+//            "create table " + TABLE_MESSAGES + "("
+//                    + COLUMN_ID + TYPE_INTEGER + " primary key autoincrement" + COMMA_SEP
+//                    + COLUMN_MSG + TYPE_TEXT + " not null" + COMMA_SEP
+//                    + COLUMN_TIME + TYPE_INTEGER + COMMA_SEP
+//                    + COLUMN_IS_FROM_BEFREST + TYPE_INTEGER + " );";
 
     public MyDatabaseHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -45,26 +45,23 @@ public class MyDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL(CREATE_MESSAGES_TABLE);
+        ChatTable.onCreate(db);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        Log.w(MyDatabaseHelper.class.getName(),
-                "Upgrading database from version " + oldVersion + " to " + newVersion + ", which will destroy all old data");
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_MESSAGES);
-        onCreate(db);
+        ChatTable.onUpgrade(db, oldVersion, newVersion);
     }
 
-    public void insertMessage(ChatItem msg) {
-        SQLiteDatabase db = getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_MSG, msg.msg);
-        values.put(COLUMN_TIME, msg.time);
-        values.put(COLUMN_IS_FROM_BEFREST, msg.isFromBefrest ? 1 : 0);
-        db.insert(TABLE_MESSAGES, null, values);
-        db.close();
-    }
+//    public void insertMessage(ChatItem msg) {
+//        SQLiteDatabase db = getWritableDatabase();
+//        ContentValues values = new ContentValues();
+//        values.put(COLUMN_MSG, msg.msg);
+//        values.put(COLUMN_TIME, msg.time);
+//        values.put(COLUMN_IS_FROM_BEFREST, msg.isFromBefrest ? 1 : 0);
+//        db.insert(TABLE_MESSAGES, null, values);
+//        db.close();
+//    }
 
 //    public Message[] getAllMessages() {
 //        SQLiteDatabase db = getReadableDatabase();
@@ -79,10 +76,10 @@ public class MyDatabaseHelper extends SQLiteOpenHelper {
 //        return messages;
 //    }
 
-    public Cursor getMessagesCursor() {
-        SQLiteDatabase db = getReadableDatabase();
-        return db.query(TABLE_MESSAGES, ALL_COLUMNS, null, null, null, null, null);
-    }
+//    public Cursor getMessagesCursor() {
+//        SQLiteDatabase db = getReadableDatabase();
+//        return db.query(TABLE_MESSAGES, ALL_COLUMNS, null, null, null, null, null);
+//    }
 
 //    private Message cursorToMessage(Cursor cursor) {
 //        Message res = new Message();

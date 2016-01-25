@@ -2,18 +2,55 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/main_background"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/chat"
+    <ScrollView
+        android:id="@+id/background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/sendPanel"
-        android:paddingRight="8dp"
-        android:paddingLeft="8dp"
-        app:stackFromEnd="true" />
+        android:layout_above="@+id/sendPanel">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/chat_background" />
+            <!--<ImageView-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="match_parent"-->
+            <!--android:background="@drawable/chat_background" />-->
+        </RelativeLayout>
+    </ScrollView>
+
+    <android.support.v4.widget.SwipeRefreshLayout
+        android:id="@+id/refreshLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/sendPanel">
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/chat"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            app:stackFromEnd="true" />
+    </android.support.v4.widget.SwipeRefreshLayout>
+
+    <TextView
+        android:id="@+id/loadMore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:onClick="onViewClicked"
+        android:padding="@dimen/space_large"
+        android:text="بیشتر"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:textColor="@color/green"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/sendPanel"
@@ -28,10 +65,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:background="@color/li"
             android:gravity="center_vertical|right"
             android:hint="پیام..."
             android:minHeight="48dp"
-            android:background="#EEE"
             android:padding="@dimen/space_small"
             android:paddingRight="@dimen/space_medium"
             android:textAppearance="@style/TextAppearance.AppCompat.Small" />
@@ -40,9 +77,9 @@
             android:id="@+id/send"
             android:layout_width="48dp"
             android:layout_height="match_parent"
-            android:background="@drawable/send_btn_background"
+            android:background="@null"
             android:enabled="false"
             android:onClick="onViewClicked"
-            android:src="@android:drawable/ic_menu_send" />
+            android:src="@drawable/send" />
     </LinearLayout>
 </RelativeLayout>

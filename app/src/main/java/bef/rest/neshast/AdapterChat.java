@@ -22,7 +22,6 @@ public class AdapterChat extends CursorRecyclerViewAdapter<AdapterChat.ViewHolde
 
     @Override
     public void onBindViewHolder(ViewHolder viewHolder, Cursor cursor) {
-        Log.d(TAG, "onBindViewHolder: ");
         ChatItem item = ChatItem.fromCursor(cursor);
         if (item.isFromBefrest) {
             viewHolder.answer.setText(item.msg);
