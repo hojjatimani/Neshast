@@ -1,6 +1,8 @@
 package bef.rest.neshast;
 
+import android.content.Context;
 import android.util.Base64;
+import android.util.Log;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -13,26 +15,35 @@ import rest.bef.FileLog;
  * Created by hojjatimani on 1/25/2016 AD.
  */
 public class ApplicationLoader extends android.app.Application {
+    private static final String TAG = "ApplicationLoader";
     static boolean isChatting = false;
 
-    static final long uId = 2; //uid
+    static final long uId = 10012; //uid
     static String chId;
 
     static final int xapi_v = 1;
     static final int sdk_v = 1;
 
     private static final String SHARED_KEY = "23e78b4b-079b-4556-aad0-beded33ed064";
-    private static final String API_KEY = "e2a29f25-2a38-4cac-bbc5-1cec1a02fba0";
+    private static final String API_KEY = "2B907635AB3DBD1F148C35FED5DCA300";
 
     @Override
     public void onCreate() {
         super.onCreate();
         if (Util.userHasRegistered(this)) {
-            chId = "" + Util.getUserId(this);
-            String AUTH = sign(String.format(Locale.US, "/xapi/%d/subscribe/%d/%s/%d", xapi_v, uId, chId, sdk_v));
-            Befrest.init(this, uId, chId, AUTH);
-            Befrest.start(this);
+            startBefrest(this);
         }
+    }
+
+    public static void startBefrest(Context context) {
+        chId = "" + Util.getUserId(context);
+        Log.d(TAG, "startBefrest: chId=" + chId);
+        String AUTH = sign(String.format(Locale.US, "/xapi/%d/subscribe/%d/%s/%d", xapi_v, uId, chId, sdk_v));
+//        Befrest.init(context, uId, chId, AUTH);
+        Befrest.setChId(context, chId);
+        Befrest.setUId(context, uId);
+        Befrest.setAuth(context, AUTH);
+        Befrest.start(context);
     }
 
     private static String sign(String parameter2) {
@@ -69,10 +80,6 @@ public class ApplicationLoader extends android.app.Application {
         String b64 = Base64.encodeToString(digest, Base64.DEFAULT);
         b64 = b64.replace("+", "-").replace("=", "").replace("/", "_").replace("\n", "");
         return b64;
-    }
-
-    public static boolean isChatting() {
-        return isChatting;
     }
 
     public static void setIsChatting(boolean isChatting) {

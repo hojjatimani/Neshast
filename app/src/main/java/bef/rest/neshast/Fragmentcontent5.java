@@ -7,12 +7,11 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 
 /**
- * Created by hojjatimani on 1/19/2016 AD.
+ * Created by hojjatimani on 1/25/2016 AD.
  */
-public class FragmentContent2 extends Fragment {
+public class Fragmentcontent5 extends Fragment {
     View parent;
     Context context;
 
@@ -20,10 +19,10 @@ public class FragmentContent2 extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         context = inflater.getContext();
-        if (Util.isContentLocked(context, 2))
+        if (Util.isContentLocked(context, 4))
             parent = inflater.inflate(R.layout.fragment_lock, null);
         else {
-            parent = inflater.inflate(R.layout.fragment_content_2, null);
+            parent = inflater.inflate(R.layout.fragment_content_5, null);
             initViews();
         }
         return parent;

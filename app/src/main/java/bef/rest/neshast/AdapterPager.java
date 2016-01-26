@@ -8,7 +8,7 @@ import android.support.v4.app.FragmentPagerAdapter;
  * Created by hojjatimani on 1/19/2016 AD.
  */
 public class AdapterPager extends FragmentPagerAdapter {
-    int count = 5;
+    int count = 6;
     public AdapterPager(FragmentManager fm) {
         super(fm);
     }
@@ -26,6 +26,8 @@ public class AdapterPager extends FragmentPagerAdapter {
                 return new FragmentContent3();
             case 4:
                 return new FragmentContent4();
+            case 5:
+                return new Fragmentcontent5();
 
         }
         return null;

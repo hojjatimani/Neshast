@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.media.RingtoneManager;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import org.json.JSONException;
@@ -21,19 +22,26 @@ import rest.bef.FileLog;
  * Created by hojjatimani on 1/25/2016 AD.
  */
 public class StaticPushReceiver extends BefrestPushReceiver {
+    private static final String TAG = "StaticPushReceiver";
+
     @Override
     public void onPushReceived(Context context, BefrestMessage[] messages) {
+        Log.d(TAG, "onPushReceived: ");
         for (BefrestMessage message : messages) {
             processMsg(context, message);
         }
     }
 
     private void processMsg(Context context, BefrestMessage message) {
+        Log.d(TAG, "processMsg: ");
         JSONObject jsObject = null;
         try {
             jsObject = new JSONObject(message.getData());
-            switch (jsObject.getString(Util.SIGNAL)) {
+            String signal = jsObject.getString(Util.SIGNAL);
+            Log.d(TAG, "processMsg: signal" + signal);
+            switch (signal) {
                 case "1":
+                    Log.d(TAG, "processMsg: enable");
                     Util.enableIntroductionBtn(context);
                     break;
                 case "2":
@@ -54,7 +62,7 @@ public class StaticPushReceiver extends BefrestPushReceiver {
                         showNotification(context, "پیام جدیدی از بفرست دارید!", 3, ActivityChat.class);
                     break;
                 default:
-                    Util.unlockContent(context, Integer.valueOf(jsObject.getString(Util.SIGNAL)) % 10);
+                    Util.unlockContent(context, Integer.valueOf(signal) % 10);
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -95,8 +103,8 @@ public class StaticPushReceiver extends BefrestPushReceiver {
 
 
         // Using RemoteViews to bind custom layouts into Notification
-        RemoteViews remoteViews = new RemoteViews(context.getPackageName(),
-                R.layout.notification_custom);
+//        RemoteViews remoteViews = new RemoteViews(context.getPackageName(),
+//                R.layout.notification_custom);
 
         // Open NotificationView Class on Notification Click
         Intent intent = new Intent(context, activityToShow);
@@ -110,19 +118,20 @@ public class StaticPushReceiver extends BefrestPushReceiver {
                 .setSmallIcon(R.mipmap.ic_launcher)
                         // Set Ticker Message
                 .setTicker("پیام از بفرست!")
+                .setContentText(msg)
                         // Dismiss Notification
                 .setAutoCancel(true)
                         // Set PendingIntent into Notification
                 .setContentIntent(pIntent)
                         // Set RemoteViews into Notification
-                .setContent(remoteViews)
+//                .setContent(remoteViews)
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                 .setVibrate(new long[]{0, 300, 50, 300});
 
         // Locate and set the Text into customnotificationtext.xml TextViews
 //        remoteViews.setTextViewText(R.id.title, "پیام از بفرست");
 
-        remoteViews.setTextViewText(R.id.text, msg);
+//        remoteViews.setTextViewText(R.id.text, msg);
 
         // Create Notification Manager
         NotificationManager notificationmanager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);

@@ -22,8 +22,17 @@ public class FragmentContent3 extends Fragment {
         if (Util.isContentLocked(context, 3))
             parent = inflater.inflate(R.layout.fragment_lock, null);
         else {
-            parent = inflater.inflate(R.layout.fragment_content_0, null);
+            parent = inflater.inflate(R.layout.fragment_content_3, null);
+            initViews();
         }
         return parent;
+    }
+
+    private void initViews() {
+        setFont();
+    }
+
+    private void setFont() {
+        Util.setFont(context, Util.FontFamily.Default, Util.FontWeight.Regular, parent.findViewById(R.id.label));
     }
 }

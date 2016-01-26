@@ -27,4 +27,7 @@ public interface RetrofitService {
     @FormUrlEncoded
     @POST("ask-question/{uId}")
     Call<POJOs.AskResponse> sendQuestion(@Path("uId") long uId, @Field("question") String question);
+
+    @POST("show-me/{uId}")
+    Call<POJOs.AskResponse> showMe(@Path("uId") long uId);
 }

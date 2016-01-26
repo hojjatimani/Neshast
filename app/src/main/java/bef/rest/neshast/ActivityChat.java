@@ -1,6 +1,5 @@
 package bef.rest.neshast;
 
-import android.content.ContentValues;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -16,13 +15,23 @@ import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.GsonConverterFactory;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 public class ActivityChat extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = "ActivityChat";
@@ -30,13 +39,15 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
     ImageView profilePicture;
     EditText msg;
     ImageButton send;
-    AdapterChat chatAdapter;
-    RecyclerView chat;
+        AdapterChat chatAdapter;
+//    AdapterListView chatAdapter;
+        RecyclerView chat;
+//    ListView chat;
     ContentObserver observer;
     TextView loadMore;
     SwipeRefreshLayout refreshLayout;
 
-    int loadBlockSize = 100;
+    int loadBlockSize = 13;
     int numberOfItemsInList = loadBlockSize;
 
     int prevNumerOfchats = -1;
@@ -52,6 +63,9 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
         LinearLayoutManager llm = new LinearLayoutManager(this);
         llm.setOrientation(LinearLayoutManager.VERTICAL);
         llm.setStackFromEnd(true);
+        llm.setReverseLayout(true);
+//        Log.d(TAG, "================>>>>>>>>>>>> getStackFromEnd" + llm.getStackFromEnd());
+
         chat.setLayoutManager(llm);
         fillData();
 
@@ -64,6 +78,12 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
     protected void onPause() {
         super.onPause();
         ApplicationLoader.setIsChatting(false);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        ApplicationLoader.setIsChatting(true);
     }
 
     private void initViews() {
@@ -80,6 +100,7 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
         msg = (EditText) findViewById(R.id.msg);
         send = (ImageButton) findViewById(R.id.send);
         chat = (RecyclerView) findViewById(R.id.chat);
+//        chat = (ListView) findViewById(R.id.chat);
         loadMore = (TextView) findViewById(R.id.loadMore);
         refreshLayout = (SwipeRefreshLayout) findViewById(R.id.refreshLayout);
         send.setEnabled(false);
@@ -107,6 +128,7 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
                 Log.d(TAG, "onRefresh: moreItesmExist:" + moreItemsExist);
                 if (moreItemsExist) {
                     prevNumerOfchats = chatAdapter.getItemCount();
+//                    prevNumerOfchats = chatAdapter.getCount();
                     numberOfItemsInList += loadBlockSize;
                     getSupportLoaderManager().restartLoader(0, null, ActivityChat.this);
                 } else {
@@ -142,28 +164,10 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
 //        });
     }
 
-    public void onViewClicked(View view) {
-        int vId = view.getId();
-        if (vId == send.getId()) {
-            Util.addMessageToChatTable(this, msg.getText().toString(), false, System.currentTimeMillis());
-            msg.setText("");
-        }
-    }
-
-
     private void fillData() {
-
-        // Fields from the database (projection)
-        // Must include the _id column for the adapter to work
-        String[] from = new String[]{ChatTable.COLUMN_MSG};
-        // Fields on the UI to which we map
-        int[] to = new int[]{R.id.label};
-
         getSupportLoaderManager().initLoader(0, null, this);
         chatAdapter = new AdapterChat(this, null);
-//        adapter = new SimpleCursorAdapter(this, R.layout.todo_row, null, from,
-//                to, 0);
-//
+//        chatAdapter = new AdapterListView(this, null);
         chat.setAdapter(chatAdapter);
     }
 
@@ -180,26 +184,28 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
         Log.d(TAG, "onCreateLoader: ");
         String[] projection = {ChatTable.COLUMN_ID, ChatTable.COLUMN_MSG, ChatTable.COLUMN_TIME, ChatTable.COLUMN_IS_FROM_BEFREST};
         CursorLoader cursorLoader = new CursorLoader(this,
-                ContentProviderChat.CONTENT_URI, projection, null, null, "ROWID DESC limit " + numberOfItemsInList);
+                ContentProviderChat.CONTENT_URI, projection, null, null, "time DESC limit " + numberOfItemsInList);
         return cursorLoader;
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if (data.getCount() > 0) {
+            data.moveToFirst();
+            ChatItem chatItem = ChatItem.fromCursor(data);
+            Log.d(TAG, "onLoadFinished: chatItem ==" + chatItem.msg);
+        }
         chatAdapter.changeCursor(data);
         int itemCount = chatAdapter.getItemCount();
+//        int itemCount = chatAdapter.getCount();
         if (prevNumerOfchats > -1) {
-            int scroll = itemCount - prevNumerOfchats;
-            if (scroll < 0) scroll = 0;
-            chat.scrollToPosition(scroll);
+//            int scroll = itemCount - prevNumerOfchats;
+//            if (scroll < 0) scroll = 0;
+            chat.scrollToPosition(prevNumerOfchats);
+//            chat.setSelection(scroll);
             prevNumerOfchats = -1;
-        } else chat.scrollToPosition(itemCount - 1);
-//        chat.post(new Runnable() {
-//            @Override
-//            public void run() {
-//                chat.getLayoutManager().scrollToPosition(itemCount);
-//            }
-//        });
+        } else chat.scrollToPosition(0);
+//        } else chat.setSelection(itemCount - 1);
         Log.d(TAG, "onLoadFinished: itemCount=" + itemCount);
         refreshLayout.setRefreshing(false);
     }
@@ -226,4 +232,46 @@ public class ActivityChat extends AppCompatActivity implements LoaderManager.Loa
             Log.d(TAG, "onChange: Observer!");
         }
     }
+
+
+    public void onViewClicked(View view) {
+        int vId = view.getId();
+        if (vId == send.getId()) {
+            if (Util.isNetworkAvailable(this)) {
+                String question = msg.getText().toString();
+                sendQuestion(question);
+                Util.addMessageToChatTable(this, question, false, System.currentTimeMillis());
+                msg.setText("");
+            } else Util.alertNoConnection(this);
+        }
+    }
+
+    private void sendQuestion(final String question) {
+        RetrofitService retrofit = new Retrofit.Builder()
+                .baseUrl(Util.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build().create(RetrofitService.class);
+        Call<POJOs.AskResponse> askResponse = retrofit.sendQuestion(Util.getUserId(this), question);
+        askResponse.enqueue(new Callback<POJOs.AskResponse>() {
+            @Override
+            public void onResponse(Response<POJOs.AskResponse> response) {
+                Log.d(TAG, "onResponse (ask question): errCode" + response.body().errorCode + "   ->" + question);
+//                if (response.isSuccess())
+//                    if (response.body().errorCode == 0) {
+//                        Util.showToast(ActivitySignUp.this, "پرسش با موفقیت ارسال شد!", Toast.LENGTH_LONG);
+//                        tempQuestion = "";
+//                        return;
+//                    }
+//                Util.showToast(ActivitySignUp.this, "ارسال پرسش با مشکل مواجه شد.", Toast.LENGTH_LONG);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Log.d(TAG, "onFailure: ask question   ->" + question);
+                t.printStackTrace();
+                Util.showToast(ActivityChat.this, "ارسال پرسش با مشکل مواجه شد! دوباره تلاش کنید.", Toast.LENGTH_LONG);
+            }
+        });
+    }
+
 }

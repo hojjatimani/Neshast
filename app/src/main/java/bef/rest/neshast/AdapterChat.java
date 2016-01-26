@@ -3,18 +3,15 @@ package bef.rest.neshast;
 import android.content.Context;
 import android.database.Cursor;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
  * Created by hojjatimani on 1/24/2016 AD.
  */
-public class AdapterChat extends CursorRecyclerViewAdapter<AdapterChat.ViewHolder> {
+public class AdapterChat extends AdapterCursorRecyclerView<AdapterChat.ViewHolder> {
     private static final String TAG = "AdapterChat";
     public AdapterChat(Context context, Cursor cursor) {
         super(context, cursor);

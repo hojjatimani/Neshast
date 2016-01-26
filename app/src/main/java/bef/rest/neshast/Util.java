@@ -33,10 +33,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.EventListener;
@@ -62,7 +65,7 @@ public class Util {
     private static final String PREF_CONTENT_IS_LOCKED = "PREF_CONTENT_IS_LOCKED";
     private static final String PREF_NUMBER_OF_CHAT_MESSAGES = "PREF_NUMBER_OF_CHAT_MESSAGES";
     private static final String PREF_IS_INTRO_BTN_ENABLED = "PREF_IS_INTRO_BTN_ENABLED";
-    public static final String BASE_URL = "http://172.17.0.175:6543/meeting/";
+    public static final String BASE_URL = "http://79.127.127.144:6544/meeting/";
     public static final String SIGNAL = "signal";
     public static final String MESSAGE = "message";
 
@@ -71,42 +74,74 @@ public class Util {
 
     private static FontFamily appDefaultFontFamily = FontFamily.IranSans;
 
+
+    public static void setUserData(Context context, String name, String org, String profilePicPath) {
+        setUserName(context, name);
+        setUserOrganization(context, org);
+//        if (profilePicPath != null) setUsersProfilePicture(context, profilePicPath);
+    }
+
+
     public static void setUserName(Context context, String userName) {
         SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
         preferences.edit().putString(PREF_USER_NAME, userName).commit();
-    }
-
-    public static String getPhoneId(Context context) {
-        return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-    }
-
-    public static boolean isFirstRun(Context context) {
-        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        return preferences.getBoolean(IS_FIRST_RUN, true);
-    }
-
-    public static void setIsFirstRun(Context context, boolean isFirstRun) {
-        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        preferences.edit().putBoolean(IS_FIRST_RUN, isFirstRun).commit();
-    }
-
-    public static void setUsersProfilePicture(Context context, String path) {
-        copyFile(path, APP_DATA_DIRECTORY, PROFILE_PICTURE_FILE_NAME + path.substring(path.lastIndexOf('.')));
-        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
-        preferences.edit().putString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME + path.substring(path.lastIndexOf('.'))).commit();
-    }
-
-    public static void setImageUploaded(Context context, boolean uploaded) {
-        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_IS_IMAGE_UPLOADED, uploaded).commit();
     }
 
     public static String getUsersName(Context context) {
         return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_USER_NAME, "");
     }
 
-    public static String getUserOrganization(Context context) {
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_USER_ORGANIZATION, "");
+
+//    public static void setUsersProfilePicture(Context context, String path) {
+//        copyFile(path, APP_DATA_DIRECTORY, PROFILE_PICTURE_FILE_NAME + path.substring(path.lastIndexOf('.')));
+//        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
+//        preferences.edit().putString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME + path.substring(path.lastIndexOf('.'))).commit();
+//    }
+
+
+    public static void setUsersProfilePicture(Context context, Uri uri) {
+//        String path = uri.getPath();
+        String extention = ".jpg";
+        uriToFile(context, uri, APP_DATA_DIRECTORY, PROFILE_PICTURE_FILE_NAME + extention);
+        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
+        preferences.edit().putString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME + extention).commit();
     }
+
+    public static void userSetPictureWithCamera(Context context) {
+        String extention = ".jpg";
+        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
+        preferences.edit().putString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME + extention).commit();
+    }
+
+    public static final String getProfilePicturePath(Context context) {
+        String extention = ".jpg";
+        File dir = new File(APP_DATA_DIRECTORY);
+        dir.mkdirs();
+        File f = new File(APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME + extention);
+        if (!f.exists()) try {
+            f.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_PROFILE_PICTURE_PATH, APP_DATA_DIRECTORY + File.separator + PROFILE_PICTURE_FILE_NAME + extention);
+    }
+
+    public static void setImageUploaded(Context context, boolean uploaded) {
+        context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_IS_IMAGE_UPLOADED, uploaded).commit();
+    }
+
+    public static boolean userHasProfilePicture(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).contains(PREF_PROFILE_PICTURE_PATH);
+    }
+
+    public static boolean shouldUploadImage(Context context) {
+        return userHasProfilePicture(context) && !isImageUploaded(context);
+    }
+
+    private static boolean isImageUploaded(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_IS_IMAGE_UPLOADED, false);
+    }
+
 
     public static void setUserId(Context context, long userId) {
         SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
@@ -126,12 +161,18 @@ public class Util {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_USER_HAS_REGISTERED, hasRegisrered).commit();
     }
 
-    public static final String getProfilePicturePath(Context context) {
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_PROFILE_PICTURE_PATH, "");
+
+    public static String getUserOrganization(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getString(PREF_USER_ORGANIZATION, "");
     }
 
     public static void setUserOrganization(Context context, String org) {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putString(PREF_USER_ORGANIZATION, org).commit();
+    }
+
+
+    public static int getNumberOfChatMessages(Context context) {
+        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getInt(PREF_NUMBER_OF_CHAT_MESSAGES, 0);
     }
 
     public static void increaserNumberOfChatMessages(Context context, int n) {
@@ -149,37 +190,6 @@ public class Util {
         Util.increaserNumberOfChatMessages(context, 1);
     }
 
-    public static int getNumberOfChatMessages(Context context) {
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getInt(PREF_NUMBER_OF_CHAT_MESSAGES, 0);
-    }
-
-    static int getScreenWidth(Activity activity) {
-        Display display = activity.getWindowManager().getDefaultDisplay();
-        return display.getWidth();
-    }
-
-    static int getScreenHeight(Activity activity) {
-        Display display = activity.getWindowManager().getDefaultDisplay();
-        return display.getHeight();
-    }
-
-    public static boolean userHasProfilePicture(Context context) {
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).contains(PREF_PROFILE_PICTURE_PATH);
-    }
-
-    public static void setUserData(Context context, String name, String org, String profilePicPath) {
-        setUserName(context, name);
-        setUserOrganization(context, org);
-        if (profilePicPath != null) setUsersProfilePicture(context, profilePicPath);
-    }
-
-    public static boolean shouldUploadImage(Context context) {
-        return userHasProfilePicture(context) && !isImageUploaded(context);
-    }
-
-    private static boolean isImageUploaded(Context context) {
-        return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_IS_IMAGE_UPLOADED, false);
-    }
 
     public static boolean isContentLocked(Context context, int index) {
         return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_CONTENT_IS_LOCKED + index, true);
@@ -189,17 +199,33 @@ public class Util {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_CONTENT_IS_LOCKED + index, false).commit();
     }
 
-    public static void enableIntroductionBtn(Context context){
+
+    public static void enableIntroductionBtn(Context context) {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_IS_INTRO_BTN_ENABLED, true).commit();
     }
 
-    public static void disableIntroductionBtn(Context context){
+    public static void disableIntroductionBtn(Context context) {
         context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).edit().putBoolean(PREF_IS_INTRO_BTN_ENABLED, false).commit();
     }
 
-    public static boolean isIntroductionBtnEnabled(Context context){
+    public static boolean isIntroductionBtnEnabled(Context context) {
         return context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE).getBoolean(PREF_IS_INTRO_BTN_ENABLED, false);
     }
+
+
+//    public static String getPhoneId(Context context) {
+//        return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+//    }
+//
+//    public static boolean isFirstRun(Context context) {
+//        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
+//        return preferences.getBoolean(IS_FIRST_RUN, true);
+//    }
+//
+//    public static void setIsFirstRun(Context context, boolean isFirstRun) {
+//        SharedPreferences preferences = context.getSharedPreferences(MAIN_PREFRENCES, Context.MODE_PRIVATE);
+//        preferences.edit().putBoolean(IS_FIRST_RUN, isFirstRun).commit();
+//    }
 
 
     public enum FontFamily {
@@ -264,6 +290,7 @@ public class Util {
         return FONTS_PATH + fontFamily.toString() + "-" + fontWeight.toString() + FONTS_EXTENTION;
     }
 
+
     public static void setText(Object elem, String text) {
         if (elem instanceof TextView)
             ((TextView) elem).setText(text);
@@ -310,11 +337,13 @@ public class Util {
         setText(elem1, text1, elem2, text2, elem3, text3, elem4, text4, elem5, text5, elem6, text6, elem7, text7);
     }
 
+
     public static boolean isNetworkAvailable(Context context) {
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
         return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
+
 
     public static Bitmap decodeSampledBitmapFromFile(String filePath,
                                                      int reqWidth, int reqHeight) {
@@ -404,56 +433,118 @@ public class Util {
         return output;
     }
 
-    public static void copyFile(String input, String outputPath, String outputName) {
+//    public static String getRealPathFromURI(Context context, Uri contentURI) {
+//        String result;
+//        Cursor cursor = context.getContentResolver().query(contentURI, null, null, null, null);
+//        if (cursor == null) { // Source is Dropbox or other similar local file path
+//            result = contentURI.getPath();
+//        } else {
+//            cursor.moveToFirst();
+//            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+//            result = cursor.getString(idx);
+//            cursor.close();
+//        }
+//        return result;
+//    }
 
-        InputStream in = null;
-        OutputStream out = null;
+    public static String getRealPathFromURI(Context context, Uri contentUri) {
+        Cursor cursor = null;
         try {
-
-            //create output directory if it doesn't exist
-            File dir = new File(outputPath);
-            if (!dir.exists()) {
-                dir.mkdirs();
-                Log.d(TAG, "copyFile: out dir made!");
+            String[] proj = {MediaStore.Images.Media.DATA};
+            cursor = context.getContentResolver().query(contentUri, proj, null, null, null);
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            return cursor.getString(column_index);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
             }
+        }
+    }
+
+    public static void uriToFile(Context context, Uri uri, String outputPath, String outputName) {
+        String destinationFilename = outputPath + File.separator + outputName;
 
 
-            in = new FileInputStream(input);
-            out = new FileOutputStream(outputPath + File.separator + outputName);
+        BufferedInputStream bis = null;
+        BufferedOutputStream bos = null;
 
-            byte[] buffer = new byte[1024];
+        try {
+            File dir = new File(outputPath);
+            dir.mkdirs();
+
+            File file = new File(destinationFilename);
+            file.createNewFile();
+
+            InputStream inputStream = context.getContentResolver().openInputStream(uri);
+            FileOutputStream out = new FileOutputStream(destinationFilename);
+            byte[] buffer = new byte[4 * 1024]; // or other buffer size
             int read;
-            while ((read = in.read(buffer)) != -1) {
+
+            while ((read = inputStream.read(buffer)) != -1) {
                 out.write(buffer, 0, read);
             }
-            in.close();
-            in = null;
-
-            // write the output file (You have now copied the file)
             out.flush();
             out.close();
-            out = null;
+            inputStream.close();
 
-        } catch (FileNotFoundException fnfe1) {
-            Log.e("tag", fnfe1.getMessage());
-        } catch (Exception e) {
-            Log.e("tag", e.getMessage());
+//            bis = new BufferedInputStream(new FileInputStream(sourceFilename));
+//            bos = new BufferedOutputStream(new FileOutputStream(destinationFilename, false));
+//            byte[] buf = new byte[1024];
+//            bis.read(buf);
+//            do {
+//                Log.d(TAG, "uriToFile: ====================writing!!!!!!!");
+//                bos.write(buf);
+//            } while(bis.read(buf) != -1);
+        } catch (IOException e) {
+
+        } finally {
+            try {
+                if (bis != null) bis.close();
+                if (bos != null) bos.close();
+            } catch (IOException e) {
+
+            }
         }
     }
 
-    public static String getRealPathFromURI(Context context, Uri contentURI) {
-        String result;
-        Cursor cursor = context.getContentResolver().query(contentURI, null, null, null, null);
-        if (cursor == null) { // Source is Dropbox or other similar local file path
-            result = contentURI.getPath();
-        } else {
-            cursor.moveToFirst();
-            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
-            result = cursor.getString(idx);
-            cursor.close();
-        }
-        return result;
-    }
+//    public static void copyFile(String input, String outputPath, String outputName) {
+//
+//        InputStream in = null;
+//        OutputStream out = null;
+//        try {
+//
+//            //create output directory if it doesn't exist
+//            File dir = new File(outputPath);
+//            if (!dir.exists()) {
+//                dir.mkdirs();
+//                Log.d(TAG, "copyFile: out dir made!");
+//            }
+//
+//
+//            in = new FileInputStream(input);
+//            out = new FileOutputStream(outputPath + File.separator + outputName);
+//
+//            byte[] buffer = new byte[1024];
+//            int read;
+//            while ((read = in.read(buffer)) != -1) {
+//                out.write(buffer, 0, read);
+//            }
+//            in.close();
+//            in = null;
+//
+//            // write the output file (You have now copied the file)
+//            out.flush();
+//            out.close();
+//            out = null;
+//
+//        } catch (FileNotFoundException fnfe1) {
+//            Log.e("tag", fnfe1.getMessage());
+//        } catch (Exception e) {
+//            Log.e("tag", e.getMessage());
+//        }
+//    }
+
 
     public static void showToast(Context c, String m, @Snackbar.Duration int d) {
         Toast toast = Toast.makeText(c, m, d);
@@ -461,19 +552,22 @@ public class Util {
         toast.show();
     }
 
-    public static int dpToPx(int dp) {
-        return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
-    }
-
     public static void alertNoConnection(Context context) {
         showToast(context, "اتصال به اینترنت را بررسی کنید!", Toast.LENGTH_SHORT);
     }
 
-    public static int getActionBarSize(Context context) {
-        TypedValue tv = new TypedValue();
-        if (context.getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true))
-            return TypedValue.complexToDimensionPixelSize(tv.data, context.getResources().getDisplayMetrics());
-        Log.d(TAG, "getActionBarSize: EROOOOORRRRRRRR!!!!!!!!!!!!");
-        return dpToPx(56);
+
+    public static int dpToPx(int dp) {
+        return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
+    }
+
+    static int getScreenWidth(Activity activity) {
+        Display display = activity.getWindowManager().getDefaultDisplay();
+        return display.getWidth();
+    }
+
+    static int getScreenHeight(Activity activity) {
+        Display display = activity.getWindowManager().getDefaultDisplay();
+        return display.getHeight();
     }
 }

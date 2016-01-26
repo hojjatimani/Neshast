@@ -10,6 +10,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -19,7 +21,6 @@ import java.util.Date;
 public class FragmentContent0 extends Fragment {
     View parent;
     TextView timer;
-    private Date neshastDate;
     Context context;
     CountDownTimer countDownTimer;
 
@@ -29,19 +30,28 @@ public class FragmentContent0 extends Fragment {
         context = inflater.getContext();
         parent = inflater.inflate(R.layout.fragment_content_0, null);
         initViews();
-        if (countDownTimer == null)
-            countDownTimer = new CountDownTimer(getNeshastDate().getTime() - System.currentTimeMillis(), 1000) {
-                @Override
-                public void onTick(long millisUntilFinished) {
-                    updateTimer(millisUntilFinished);
-                }
+//        final long neshastTime = getNeshastDate().getTime();
+        final long neshastTime = System.currentTimeMillis() + 10000;
+        final long now = System.currentTimeMillis();
+        if (now > neshastTime) {
+            parent.findViewById(R.id.label).setVisibility(View.GONE);
+            timer.setText("نشست آغاز شد!");
+        } else {
+            if (countDownTimer == null)
+                countDownTimer = new CountDownTimer(neshastTime - now, 1000) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        updateTimer(millisUntilFinished);
+                    }
 
-                @Override
-                public void onFinish() {
-
-                }
-            };
-        countDownTimer.start();
+                    @Override
+                    public void onFinish() {
+                        parent.findViewById(R.id.label).setVisibility(View.GONE);
+                        timer.setText("نشست آغاز شد!");
+                    }
+                };
+            countDownTimer.start();
+        }
         return parent;
     }
 
@@ -55,10 +65,14 @@ public class FragmentContent0 extends Fragment {
     }
 
     private Date getNeshastDate() {
-        Date date = new Date();
-        date.setHours(date.getHours() + 3);
-        date.setMinutes(date.getMinutes() + 30);
-        return date;
+        SimpleDateFormat formater = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+        Date res = new Date();
+        try {
+            res = formater.parse("2016-01-28_09-00-00");
+        } catch (ParseException e) {
+
+        }
+        return res;
     }
 
     @Override

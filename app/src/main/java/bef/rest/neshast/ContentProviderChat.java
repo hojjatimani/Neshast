@@ -62,7 +62,7 @@ public class ContentProviderChat extends ContentProvider {
         checkColumns(projection);
 
         // Set the table
-//        queryBuilder.setTables(ChatTable.TABLE_CHATS);
+        queryBuilder.setTables(ChatTable.TABLE_CHATS);
 
         int uriType = sURIMatcher.match(uri);
         switch (uriType) {
@@ -78,11 +78,11 @@ public class ContentProviderChat extends ContentProvider {
         }
 
         SQLiteDatabase db = database.getWritableDatabase();
-//        Cursor cursor = queryBuilder.query(db, projection, selection,
-//                selectionArgs, null, null, sortOrder);
+        Cursor cursor = queryBuilder.query(db, projection, selection,
+                selectionArgs, null, null, sortOrder);
 
-        String query = "select * from (select * from " + ChatTable.TABLE_CHATS +" order by " +sortOrder+ ") order by ROWID DESC;";
-        Cursor cursor = db.rawQuery(query, null);
+//        String query = "select * from (select * from " + ChatTable.TABLE_CHATS +" order by " +sortOrder+ ") order by time DESC;";
+//        Cursor cursor = db.rawQuery(query, null);
 //        "select * from (select * from tblmessage order by sortfield ASC limit 10) order by sortfield DESC"
 
 

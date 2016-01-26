@@ -26,4 +26,5 @@
 
     <color name="signUpEdittextTextColor">#EEE</color>
 
+    <color name="question_back">#E2FEC9</color>
 </resources>
